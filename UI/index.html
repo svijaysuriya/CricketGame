@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIT Cricket Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🏏 MIT Cricket Game</h1>
+        
+        <div class="input-section">
+            <h2>Record a Shot</h2>
+            <div class="form-group">
+                <label for="rollNumber">Roll Number (10 digits):</label>
+                <input type="text" id="rollNumber" maxlength="10" pattern="\d{10}" placeholder="Enter 10-digit roll number">
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-four" onclick="hitShot(4)">Hit a 4!</button>
+                <button class="btn btn-six" onclick="hitShot(6)">Hit a 6!!</button>
+            </div>
+        </div>
+
+        <div class="scoreboard-section">
+            <h2>📊 Live Scoreboard</h2>
+            <div id="scoreboard">
+                <p>Loading scoreboard...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

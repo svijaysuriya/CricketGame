@@ -7,7 +7,13 @@ function validateRollNumber(rollNumber) {
 
 // Hit shot API call
 function hitShot(shot) {
+    const name = document.getElementById("name").value.trim();
     const rollNumber = document.getElementById("rollNumber").value;
+
+    if (!name) {
+        alert("Please enter your Name!");
+        return;
+    }
 
     if (!rollNumber) {
         alert("Please enter your Roll Number!");
@@ -22,7 +28,7 @@ function hitShot(shot) {
     fetch(`${API_BASE_URL}/hit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rollNumber: rollNumber, shot })
+        body: JSON.stringify({ name: name, rollNumber: rollNumber, shot })
     })
     .then(response => response.json())
     .then(data => {
@@ -46,19 +52,20 @@ function fetchScoreboard() {
         .then(data => {
             console.log(data);
             let scoreboardHTML = "<table class='scoreboard-table'>";
-            scoreboardHTML += "<thead><tr><th>Rank</th><th>Roll Number</th><th>Score</th></tr></thead>";
+            scoreboardHTML += "<thead><tr><th>Rank</th><th>Name</th><th>Roll Number</th><th>Score</th></tr></thead>";
             scoreboardHTML += "<tbody>";
 
             if (data && data.length > 0) {
                 data.forEach((student, index) => {
                     scoreboardHTML += `<tr>
                         <td>${index + 1}</td>
+                        <td>${student.name || '-'}</td>
                         <td>${student.rollNumber}</td>
                         <td>${student.score} Runs</td>
                     </tr>`;
                 });
             } else {
-                scoreboardHTML += "<tr><td colspan='3'>No scores yet. Be the first to play!</td></tr>";
+                scoreboardHTML += "<tr><td colspan='4'>No scores yet. Be the first to play!</td></tr>";
             }
 
             scoreboardHTML += "</tbody></table>";

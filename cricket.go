@@ -25,6 +25,7 @@ var (
 
 type Student struct {
 	RollNumber string    `json:"rollNumber" bson:"rollNumber"`
+	Name       string    `json:"name" bson:"name"`
 	Score      int       `json:"score" bson:"score"`
 	LastPlayed time.Time `json:"lastPlayed" bson:"lastPlayed"`
 }
@@ -33,8 +34,13 @@ func initDB() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	mongoURI := os.Getenv("MONGODB_URI")
+	if mongoURI == "" {
+		panic("MONGODB_URI environment variable is required")
+	}
+
 	var err error
-	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo:AMWVLCEtGClaYyusfqmAAlZWMoCGgYMN@trolley.proxy.rlwy.net:39075"))
+	mongoClient, err = mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
 	if err != nil {
 		fmt.Println(err.Error())
 		panic(err)
@@ -56,10 +62,10 @@ func initDB() {
 	}
 	_, err = collection.Indexes().CreateOne(ctx, indexModel)
 	if err != nil {
-		fmt.Println("Index creation:", err.Error())
+		// fmt.Println("Index creation:", err.Error())
 	}
 
-	fmt.Println("Connected to MongoDB successfully!")
+	// fmt.Println("Connected to MongoDB successfully!")
 }
 
 // validateRollNumber checks if the roll number is exactly 10 digits
@@ -75,6 +81,7 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 
 	var input struct {
 		RollNumber string `json:"rollNumber"`
+		Name       string `json:"name"`
 		Shot       int    `json:"shot"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -90,13 +97,14 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if input.Shot != 4 && input.Shot != 6 {
+	// Validate name
+	if input.Name == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "hit either 4 or 6"})
+		json.NewEncoder(w).Encode(map[string]string{"error": "Name is required"})
 		return
 	}
 
-	fmt.Println("Student Roll Number =", input.RollNumber, "| Shot =", input.Shot)
+	// fmt.Println("Student:", input.Name, "| Roll Number =", input.RollNumber, "| Shot =", input.Shot)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -105,7 +113,7 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 	filter := bson.M{"rollNumber": input.RollNumber}
 	update := bson.M{
 		"$inc":         bson.M{"score": input.Shot},
-		"$set":         bson.M{"lastPlayed": time.Now()},
+		"$set":         bson.M{"lastPlayed": time.Now(), "name": input.Name},
 		"$setOnInsert": bson.M{"rollNumber": input.RollNumber},
 	}
 	opts := options.Update().SetUpsert(true)

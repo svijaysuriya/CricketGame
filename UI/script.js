@@ -1,10 +1,29 @@
 const API_BASE_URL = ""; // Empty for relative URLs (works on same host)
-const COOLDOWN_SECONDS = 3; // Cooldown between hits
+const COOLDOWN_SECONDS = 2; // Cooldown between hits
 let isButtonDisabled = false;
 
 // Validate roll number (must be exactly 10 digits)
 function validateRollNumber(rollNumber) {
     return /^\d{10}$/.test(rollNumber);
+}
+
+// Show shot animation
+function showShotAnimation(shot) {
+    // Remove existing animation if any
+    const existing = document.getElementById("shot-animation");
+    if (existing) existing.remove();
+
+    // Create animation overlay
+    const overlay = document.createElement("div");
+    overlay.id = "shot-animation";
+    overlay.className = shot === 6 ? "shot-six" : "shot-four";
+    overlay.innerHTML = `<span>${shot}</span>`;
+    document.body.appendChild(overlay);
+
+    // Remove after animation completes
+    setTimeout(() => {
+        overlay.remove();
+    }, 2000);
 }
 
 // Disable/enable buttons with countdown
@@ -64,9 +83,11 @@ function hitShot(shot) {
     })
     .then(response => response.json())
     .then(data => {
-        console.log("Shot registered:", data);
         if (data.error) {
             alert(data.error);
+        } else {
+            // Show animation on success
+            showShotAnimation(shot);
         }
         fetchScoreboard(); // Update scoreboard after every shot
     })
@@ -82,7 +103,6 @@ function fetchScoreboard() {
     })
         .then(response => response.json())
         .then(data => {
-            console.log(data);
             let scoreboardHTML = "<table class='scoreboard-table'>";
             scoreboardHTML += "<thead><tr><th>Rank</th><th>Name</th><th>Roll Number</th><th>Score</th></tr></thead>";
             scoreboardHTML += "<tbody>";

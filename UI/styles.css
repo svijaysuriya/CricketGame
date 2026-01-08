@@ -93,3 +93,70 @@ button:hover {
 .scoreboard-table tbody tr:nth-child(3) {
     background-color: #cd7f32;
 }
+
+/* Shot Animation */
+#shot-animation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    pointer-events: none;
+    animation: fadeOut 1.5s ease-out forwards;
+}
+
+#shot-animation span {
+    font-size: 200px;
+    font-weight: bold;
+    text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
+    animation: popIn 0.3s ease-out, shake 0.5s ease-in-out 0.3s;
+}
+
+#shot-animation.shot-four {
+    background: rgba(0, 100, 255, 0.3);
+}
+
+#shot-animation.shot-four span {
+    color: #0066ff;
+}
+
+#shot-animation.shot-six {
+    background: rgba(0, 200, 100, 0.3);
+}
+
+#shot-animation.shot-six span {
+    color: #00cc44;
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px) rotate(-5deg); }
+    75% { transform: translateX(10px) rotate(5deg); }
+}
+
+@keyframes fadeOut {
+    0%, 70% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}

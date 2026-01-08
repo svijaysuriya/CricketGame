@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	RATE_LIMIT_SECONDS = 3 // Minimum seconds between hits per student
+	RATE_LIMIT_SECONDS = 2 // Minimum seconds between hits per student
 	CACHE_TTL_SECONDS  = 2 // Scoreboard cache TTL
 )
 

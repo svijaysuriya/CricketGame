@@ -1,11 +1,18 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f4f4f4;
     text-align: center;
+    margin: 0;
+    padding: 10px;
 }
 
 .container {
-    width: 50%;
+    width: 100%;
+    max-width: 600px;
     margin: auto;
     padding: 20px;
     background: white;
@@ -15,26 +22,53 @@ body {
 
 h1 {
     color: #333;
+    font-size: 1.5rem;
+}
+
+h2 {
+    font-size: 1.2rem;
 }
 
 input {
     display: block;
-    width: 80%;
+    width: 100%;
     margin: 10px auto;
-    padding: 10px;
+    padding: 12px;
     font-size: 16px;
     border: 1px solid #ddd;
     border-radius: 5px;
 }
 
+.form-group {
+    margin-bottom: 15px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 button {
     cursor: pointer;
-    padding: 10px;
-    margin: 10px;
-    font-size: 16px;
+    padding: 15px 30px;
+    margin: 5px;
+    font-size: 18px;
+    font-weight: bold;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 120px;
+    max-width: 150px;
 }
 
 button:nth-child(1) {
@@ -52,9 +86,10 @@ button:hover {
 #scoreboard {
     text-align: left;
     margin-top: 20px;
-    padding: 10px;
+    padding: 5px;
     background: #ddd;
     border-radius: 5px;
+    overflow-x: auto;
 }
 
 .scoreboard-table {
@@ -72,9 +107,11 @@ button:hover {
 
 .scoreboard-table th,
 .scoreboard-table td {
-    padding: 12px 15px;
+    padding: 8px 6px;
     text-align: center;
     border-bottom: 1px solid #ddd;
+    font-size: 14px;
+    word-break: break-word;
 }
 
 .scoreboard-table tbody tr:hover {
@@ -158,5 +195,32 @@ button:hover {
     }
     100% {
         opacity: 0;
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+    .container {
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 1.3rem;
+    }
+
+    button {
+        padding: 12px 20px;
+        font-size: 16px;
+        min-width: 100px;
+    }
+
+    .scoreboard-table th,
+    .scoreboard-table td {
+        padding: 6px 4px;
+        font-size: 12px;
+    }
+
+    #shot-animation span {
+        font-size: 120px;
     }
 }

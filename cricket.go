@@ -66,7 +66,7 @@ func initDB() {
 		panic(err)
 	}
 
-	collection = mongoClient.Database("cricket_db").Collection("students")
+	collection = mongoClient.Database("cricket_db").Collection("students_performance")
 
 	// Create unique index on rollNumber
 	indexModel := mongo.IndexModel{

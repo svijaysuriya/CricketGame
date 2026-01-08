@@ -1,12 +1,34 @@
 const API_BASE_URL = ""; // Empty for relative URLs (works on same host)
+const COOLDOWN_SECONDS = 3; // Cooldown between hits
+let isButtonDisabled = false;
 
 // Validate roll number (must be exactly 10 digits)
 function validateRollNumber(rollNumber) {
     return /^\d{10}$/.test(rollNumber);
 }
 
+// Disable/enable buttons with countdown
+function setButtonsDisabled(disabled) {
+    const btn4 = document.querySelector(".btn-four");
+    const btn6 = document.querySelector(".btn-six");
+    btn4.disabled = disabled;
+    btn6.disabled = disabled;
+
+    if (disabled) {
+        btn4.style.opacity = "0.5";
+        btn6.style.opacity = "0.5";
+    } else {
+        btn4.style.opacity = "1";
+        btn6.style.opacity = "1";
+    }
+}
+
 // Hit shot API call
 function hitShot(shot) {
+    if (isButtonDisabled) {
+        return;
+    }
+
     const name = document.getElementById("name").value.trim();
     const rollNumber = document.getElementById("rollNumber").value;
 
@@ -24,6 +46,16 @@ function hitShot(shot) {
         alert("Roll number must be exactly 10 digits!");
         return;
     }
+
+    // Disable buttons immediately
+    isButtonDisabled = true;
+    setButtonsDisabled(true);
+
+    // Re-enable after cooldown
+    setTimeout(() => {
+        isButtonDisabled = false;
+        setButtonsDisabled(false);
+    }, COOLDOWN_SECONDS * 1000);
 
     fetch(`${API_BASE_URL}/hit`, {
         method: "POST",

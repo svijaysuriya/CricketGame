@@ -17,10 +17,23 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const (
+	RATE_LIMIT_SECONDS = 3 // Minimum seconds between hits per student
+	CACHE_TTL_SECONDS  = 2 // Scoreboard cache TTL
+)
+
 var (
 	mongoClient *mongo.Client
 	collection  *mongo.Collection
-	mutex       sync.Mutex
+
+	// Rate limiting: map of rollNumber -> last hit time
+	rateLimitMap   = make(map[string]time.Time)
+	rateLimitMutex sync.RWMutex
+
+	// Scoreboard cache
+	cachedScoreboard     []Student
+	cacheLastUpdated     time.Time
+	scoreboardCacheMutex sync.RWMutex
 )
 
 type Student struct {
@@ -74,9 +87,26 @@ func validateRollNumber(rollNumber string) bool {
 	return matched
 }
 
+// Check rate limit for a roll number
+func isRateLimited(rollNumber string) bool {
+	rateLimitMutex.RLock()
+	lastHit, exists := rateLimitMap[rollNumber]
+	rateLimitMutex.RUnlock()
+
+	if exists && time.Since(lastHit).Seconds() < RATE_LIMIT_SECONDS {
+		return true
+	}
+	return false
+}
+
+// Update rate limit timestamp
+func updateRateLimit(rollNumber string) {
+	rateLimitMutex.Lock()
+	rateLimitMap[rollNumber] = time.Now()
+	rateLimitMutex.Unlock()
+}
+
 func hitShot(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
 	w.Header().Add("Content-Type", "application/json")
 
 	var input struct {
@@ -104,7 +134,15 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// fmt.Println("Student:", input.Name, "| Roll Number =", input.RollNumber, "| Shot =", input.Shot)
+	// Check rate limit
+	if isRateLimited(input.RollNumber) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Too many requests. Please wait a few seconds."})
+		return
+	}
+
+	// Update rate limit
+	updateRateLimit(input.RollNumber)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -130,9 +168,18 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 }
 
 func getScoreboard(w http.ResponseWriter, r *http.Request) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
 
+	// Check if cache is valid
+	scoreboardCacheMutex.RLock()
+	if time.Since(cacheLastUpdated).Seconds() < CACHE_TTL_SECONDS && cachedScoreboard != nil {
+		json.NewEncoder(w).Encode(cachedScoreboard)
+		scoreboardCacheMutex.RUnlock()
+		return
+	}
+	scoreboardCacheMutex.RUnlock()
+
+	// Cache miss - fetch from database
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -153,7 +200,12 @@ func getScoreboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
+	// Update cache
+	scoreboardCacheMutex.Lock()
+	cachedScoreboard = students
+	cacheLastUpdated = time.Now()
+	scoreboardCacheMutex.Unlock()
+
 	json.NewEncoder(w).Encode(students)
 }
 

@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	_ "net/http/pprof" // pprof for profiling
+
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -22,6 +24,21 @@ const (
 	CACHE_TTL_SECONDS  = 2 // Scoreboard cache TTL
 )
 
+// // CONNECTION POOLING - COMMENTED OUT
+// type ConnectionPool struct {
+// 	pool chan *mongo.Client
+// 	size int
+// }
+
+// func (cp ConnectionPool) Get() *mongo.Client {
+// 	return <-cp.pool // Blocks until a connection is available
+// }
+
+// func (cp ConnectionPool) Put(c *mongo.Client) {
+// 	cp.pool <- c // Returns connection to pool
+// }
+
+// SINGLE CONNECTION - Uses MongoDB's built-in connection pooling (default 100)
 var (
 	mongoClient *mongo.Client
 	collection  *mongo.Collection
@@ -43,8 +60,50 @@ type Student struct {
 	LastPlayed time.Time `json:"lastPlayed" bson:"lastPlayed"`
 }
 
+// // CONNECTION POOLING initDB - COMMENTED OUT
+// func initDB(n int) {
+// 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+// 	defer cancel()
+
+// 	mongoURI := os.Getenv("MONGODB_URI")
+// 	if mongoURI == "" {
+// 		panic("MONGODB_URI environment variable is required")
+// 	}
+
+// 	cp = ConnectionPool{
+// 		pool: make(chan *mongo.Client, n),
+// 		size: n,
+// 	}
+
+// 	for i := 0; i < n; i++ {
+// 		fmt.Println("Creating connection", i+1, "of", n)
+// 		mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
+// 		if err != nil {
+// 			fmt.Println(err.Error())
+// 			panic(err)
+// 		}
+// 		err = mongoClient.Ping(ctx, nil)
+// 		if err != nil {
+// 			fmt.Println(err.Error())
+// 			panic(err)
+// 		}
+// 		cp.pool <- mongoClient
+// 	}
+
+// 	mongoClient := cp.Get()
+// 	indexModel := mongo.IndexModel{
+// 		Keys:    bson.D{{Key: "rollNumber", Value: 1}},
+// 		Options: options.Index().SetUnique(true),
+// 	}
+// 	_, err := mongoClient.Database("cricket_db").Collection("students_performance").Indexes().CreateOne(ctx, indexModel)
+// 	if err != nil {
+// 	}
+// 	cp.Put(mongoClient)
+// }
+
+// SINGLE CONNECTION initDB - Uses MongoDB's built-in pooling
 func initDB() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	mongoURI := os.Getenv("MONGODB_URI")
@@ -75,10 +134,10 @@ func initDB() {
 	}
 	_, err = collection.Indexes().CreateOne(ctx, indexModel)
 	if err != nil {
-		// fmt.Println("Index creation:", err.Error())
+		fmt.Println("Index creation:", err.Error())
 	}
 
-	// fmt.Println("Connected to MongoDB successfully!")
+	fmt.Println("Connected to MongoDB with built-in connection pooling (default: 100)")
 }
 
 // validateRollNumber checks if the roll number is exactly 10 digits
@@ -107,6 +166,8 @@ func updateRateLimit(rollNumber string) {
 }
 
 func hitShot(w http.ResponseWriter, r *http.Request) {
+	requestStart := time.Now() // ⏱️ TIMING: Request start
+
 	w.Header().Add("Content-Type", "application/json")
 
 	var input struct {
@@ -156,7 +217,10 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 	}
 	opts := options.Update().SetUpsert(true)
 
+	dbStart := time.Now() // ⏱️ TIMING: DB start
 	_, err := collection.UpdateOne(ctx, filter, update, opts)
+	dbDuration := time.Since(dbStart) // ⏱️ TIMING: DB end
+
 	if err != nil {
 		fmt.Println(err.Error())
 		http.Error(w, "Error updating score", http.StatusInternalServerError)
@@ -165,9 +229,16 @@ func hitShot(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Shot recorded successfully"})
+
+	// ⏱️ TIMING LOG
+	fmt.Printf("[hitShot] Total: %v | DB: %v\n",
+		time.Since(requestStart),
+		dbDuration)
 }
 
 func getScoreboard(w http.ResponseWriter, r *http.Request) {
+	requestStart := time.Now() // ⏱️ TIMING: Request start
+
 	w.Header().Add("Content-Type", "application/json; charset=UTF-8")
 
 	// Check if cache is valid
@@ -175,6 +246,7 @@ func getScoreboard(w http.ResponseWriter, r *http.Request) {
 	if time.Since(cacheLastUpdated).Seconds() < CACHE_TTL_SECONDS && cachedScoreboard != nil {
 		json.NewEncoder(w).Encode(cachedScoreboard)
 		scoreboardCacheMutex.RUnlock()
+		fmt.Printf("[getScoreboard] Total: %v | CACHE HIT\n", time.Since(requestStart))
 		return
 	}
 	scoreboardCacheMutex.RUnlock()
@@ -185,20 +257,24 @@ func getScoreboard(w http.ResponseWriter, r *http.Request) {
 
 	// Sort by score descending
 	opts := options.Find().SetSort(bson.D{{Key: "score", Value: -1}})
+
+	dbStart := time.Now() // ⏱️ TIMING: DB start
 	cursor, err := collection.Find(ctx, bson.M{}, opts)
 	if err != nil {
 		fmt.Println(err.Error())
 		http.Error(w, "Error fetching scoreboard", http.StatusInternalServerError)
 		return
 	}
-	defer cursor.Close(ctx)
 
 	var students []Student
 	if err := cursor.All(ctx, &students); err != nil {
+		cursor.Close(ctx)
 		fmt.Println(err.Error())
 		http.Error(w, "Error decoding data", http.StatusInternalServerError)
 		return
 	}
+	cursor.Close(ctx)
+	dbDuration := time.Since(dbStart) // ⏱️ TIMING: DB end
 
 	// Update cache
 	scoreboardCacheMutex.Lock()
@@ -207,6 +283,11 @@ func getScoreboard(w http.ResponseWriter, r *http.Request) {
 	scoreboardCacheMutex.Unlock()
 
 	json.NewEncoder(w).Encode(students)
+
+	// ⏱️ TIMING LOG
+	fmt.Printf("[getScoreboard] Total: %v | DB: %v\n",
+		time.Since(requestStart),
+		dbDuration)
 }
 
 // CORS middleware function
@@ -227,7 +308,13 @@ func enableCORS(next http.Handler) http.Handler {
 }
 
 func main() {
-	initDB()
+	// Start pprof server on port 5566
+	go func() {
+		fmt.Println("pprof running on :5566")
+		log.Println(http.ListenAndServe(":5566", nil))
+	}()
+
+	initDB() // Uses MongoDB's built-in connection pooling (default: 100)
 
 	r := mux.NewRouter()
 

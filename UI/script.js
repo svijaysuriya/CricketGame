@@ -20,25 +20,37 @@ function showShotAnimation(shot) {
     overlay.innerHTML = `<span>${shot}</span>`;
     document.body.appendChild(overlay);
 
+    // Force reflow to ensure animation plays on mobile
+    overlay.offsetHeight;
+
     // Remove after animation completes
     setTimeout(() => {
-        overlay.remove();
+        if (overlay.parentNode) {
+            overlay.remove();
+        }
     }, 2000);
 }
 
 // Disable/enable buttons with countdown
 function setButtonsDisabled(disabled) {
-    const btn4 = document.querySelector(".btn-four");
-    const btn6 = document.querySelector(".btn-six");
+    const btn4 = document.getElementById("btn-four");
+    const btn6 = document.getElementById("btn-six");
+
+    if (!btn4 || !btn6) return;
+
     btn4.disabled = disabled;
     btn6.disabled = disabled;
 
     if (disabled) {
         btn4.style.opacity = "0.5";
         btn6.style.opacity = "0.5";
+        btn4.style.pointerEvents = "none";
+        btn6.style.pointerEvents = "none";
     } else {
         btn4.style.opacity = "1";
         btn6.style.opacity = "1";
+        btn4.style.pointerEvents = "auto";
+        btn6.style.pointerEvents = "auto";
     }
 }
 

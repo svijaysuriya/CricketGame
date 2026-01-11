@@ -69,6 +69,15 @@ button {
     flex: 1;
     min-width: 120px;
     max-width: 150px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+button:disabled {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 button:nth-child(1) {
@@ -136,14 +145,17 @@ button:hover {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;
+    z-index: 99999;
     pointer-events: none;
-    animation: fadeOut 1.5s ease-out forwards;
+    animation: fadeOut 2s ease-out forwards;
+    -webkit-animation: fadeOut 2s ease-out forwards;
 }
 
 #shot-animation span {
@@ -151,6 +163,7 @@ button:hover {
     font-weight: bold;
     text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.3);
     animation: popIn 0.3s ease-out, shake 0.5s ease-in-out 0.3s;
+    -webkit-animation: popIn 0.3s ease-out, shake 0.5s ease-in-out 0.3s;
 }
 
 #shot-animation.shot-four {

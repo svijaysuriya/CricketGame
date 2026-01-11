@@ -95,7 +95,7 @@ type Student struct {
 // 		Keys:    bson.D{{Key: "rollNumber", Value: 1}},
 // 		Options: options.Index().SetUnique(true),
 // 	}
-// 	_, err := mongoClient.Database("cricket_db").Collection("students_performance").Indexes().CreateOne(ctx, indexModel)
+// 	_, err := mongoClient.Database("cricket_db").Collection("students").Indexes().CreateOne(ctx, indexModel)
 // 	if err != nil {
 // 	}
 // 	cp.Put(mongoClient)
@@ -125,7 +125,7 @@ func initDB() {
 		panic(err)
 	}
 
-	collection = mongoClient.Database("cricket_db").Collection("students_performance")
+	collection = mongoClient.Database("cricket_db").Collection("students")
 
 	// Create unique index on rollNumber
 	indexModel := mongo.IndexModel{
